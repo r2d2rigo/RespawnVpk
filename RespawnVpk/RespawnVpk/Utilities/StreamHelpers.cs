@@ -1,7 +1,7 @@
 ﻿using System.IO;
 using System.Text;
 
-namespace SteamDatabase.ValvePak
+namespace RespawnVpk.Utilities
 {
     internal static class StreamHelpers
     {

@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
-namespace ValvePak
+namespace RespawnVpk.Utilities
 {
-    public unsafe class DecompressState
+    internal unsafe class DecompressState
     {
         internal DecompressState(void* decompress_state_ptr)
         {

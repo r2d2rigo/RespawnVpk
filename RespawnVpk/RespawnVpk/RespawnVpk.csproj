@@ -2,14 +2,10 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
-    <Product>Valve Pak Library</Product>
-    <Description>Fully fledged library to work with Valve's Pak archives in .NET</Description>
+    <Product>Respawn VPK Library</Product>
+    <Description>Library to read Respawn's VPK archives in .NET</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageTags>steam valve archive pak vpk csgo dota2 tf2</PackageTags>
-    <PackageReleaseNotes>View release notes at https://github.com/SteamDatabase/ValvePak/releases</PackageReleaseNotes>
-    <PackageIcon>logo.png</PackageIcon>
-    <SignAssembly>true</SignAssembly>
-    <AssemblyOriginatorKeyFile>ValvePak.snk</AssemblyOriginatorKeyFile>
+    <PackageTags>respawn titanfall apex legends pak vpk ea</PackageTags>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -22,13 +18,6 @@
 
   <ItemGroup>
     <PackageReference Include="System.Security.Cryptography.Algorithms" Version="4.3.1" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="..\..\Misc\logo.png">
-      <Pack>True</Pack>
-      <PackagePath></PackagePath>
-    </None>
   </ItemGroup>
 
   <ItemGroup>

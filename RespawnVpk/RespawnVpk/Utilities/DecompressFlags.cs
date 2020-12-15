@@ -1,8 +1,8 @@
 ﻿using System;
 
-namespace ValvePak
+namespace RespawnVpk.Utilities
 {
-    public enum DecompressFlags : UInt32
+    internal enum DecompressFlags : UInt32
     {
         OutputUnbuffered = 1,
         ComputeAdler32 = 2,

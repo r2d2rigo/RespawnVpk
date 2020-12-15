@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using NUnit.Framework;
-using SteamDatabase.ValvePak;
+using RespawnVpk;
 
 namespace Tests
 {

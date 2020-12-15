@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace ValvePak
+namespace RespawnVpk.Utilities
 {
-    public enum DecompressStatus : UInt32
+    internal enum DecompressStatus : UInt32
     {
         // LZHAM_DECOMP_STATUS_NOT_FINISHED indicates that the decompressor is flushing its internal buffer to the caller's output buffer. 
         // There may be more bytes available to decompress on the next call, but there is no guarantee.

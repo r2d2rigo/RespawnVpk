@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace SteamDatabase.ValvePak
+﻿namespace RespawnVpk
 {
     public class PackageEntryChunk
     {

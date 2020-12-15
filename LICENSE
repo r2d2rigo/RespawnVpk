@@ -1,6 +1,8 @@
 MIT License
 
-Copyright (c) 2016 Steam Database
+Copyright (c) 2020 Rodrigo 'r2d2rigo' Diaz
+Based on Valve Pak library Copyright (c) 2016 Steam Database
+Depends on LZHAM library Alpha 8 Copyright (c) 2009-2011 Richard Geldreich, Jr. <richgel99@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

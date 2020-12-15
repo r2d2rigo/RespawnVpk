@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
 
-namespace SteamDatabase.ValvePak
+namespace RespawnVpk
 {
     /// <summary>
     /// A utility class to compute CRC32.

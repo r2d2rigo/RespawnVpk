@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.25123.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ValvePak", "ValvePak\ValvePak.csproj", "{4BD929FD-8581-44D7-870D-919E566B3C10}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RespawnVpk", "RespawnVpk\RespawnVpk.csproj", "{4BD929FD-8581-44D7-870D-919E566B3C10}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ValvePak.Test", "ValvePak.Test\ValvePak.Test.csproj", "{C9112A44-85FF-43A8-BB73-C9CF583CC5F8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RespawnVpk.Test", "RespawnVpk.Test\RespawnVpk.Test.csproj", "{C9112A44-85FF-43A8-BB73-C9CF583CC5F8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

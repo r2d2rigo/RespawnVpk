@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace ValvePak
+namespace RespawnVpk.Utilities
 {
-    public static class Lzham
+    internal static class Lzham
     {
         [DllImport("lzham_x64.dll", CallingConvention = CallingConvention.Cdecl)]
         private static extern unsafe void* lzham_decompress_init(DecompressParameters pParams);

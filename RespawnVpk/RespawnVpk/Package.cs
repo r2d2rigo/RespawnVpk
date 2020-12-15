@@ -24,15 +24,13 @@
  * distribution.
  */
 
+using RespawnVpk.Utilities;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Security.Cryptography;
 using System.Text;
-using ValvePak;
 
-namespace SteamDatabase.ValvePak
+namespace RespawnVpk
 {
     public class Package : IDisposable
     {

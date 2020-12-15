@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace ValvePak
+namespace RespawnVpk.Utilities
 {
     [StructLayout(LayoutKind.Sequential)]
-    public unsafe struct DecompressParameters
+    internal unsafe struct DecompressParameters
     {
         public UInt32 StructSize;
         public UInt32 DictSizeLog2;
