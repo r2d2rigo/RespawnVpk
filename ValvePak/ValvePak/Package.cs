@@ -30,13 +30,29 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using ValvePak;
 
 namespace SteamDatabase.ValvePak
 {
     public class Package : IDisposable
     {
-        public const int MAGIC = 0x55AA1234;
-        public const int MAX_ENTRY_CHUNK_SIZE = 1024 * 1024;
+        private static readonly int MAGIC = 0x55AA1234;
+        private static readonly int MAX_ENTRY_CHUNK_SIZE = 1024 * 1024;
+        private static readonly string[] VPK_PREFIXES = new[]
+        {
+            "tchinese",
+            "schinese",
+            "japanese",
+            "korean",
+            "russian",
+            "polish",
+            "portuguese",
+            "italian",
+            "german",
+            "spanish",
+            "french",
+            "english",
+        };
 
         /// <summary>
         /// Always '/' as per Valve's vpk implementation.
@@ -255,57 +271,132 @@ namespace SteamDatabase.ValvePak
         /// <param name="validateCrc">If true, CRC32 will be calculated and verified for read data.</param>
         public void ReadEntry(PackageEntry entry, out byte[] output, bool validateCrc = true)
         {
-            throw new NotImplementedException();
+            DecompressState decompressState = null;
+            var parameters = new DecompressParameters();
+            parameters.DictSizeLog2 = 20;
 
-            //output = new byte[entry.SmallData.Length + entry.Length];
+            var blockReadBuffer = new Span<byte>(new byte[MAX_ENTRY_CHUNK_SIZE]);
+            var outputSpan = new Span<byte>(new byte[entry.SmallData.Length + entry.TotalLength]);
+            var outputOffset = 0;
 
-            //if (entry.SmallData.Length > 0)
-            //{
-            //    entry.SmallData.CopyTo(output, 0);
-            //}
+            if (entry.SmallData.Length > 0)
+            {
+                entry.SmallData.CopyTo(outputSpan);
+                outputOffset += entry.SmallData.Length;
+            }
 
-            //if (entry.Length > 0)
-            //{
-            //    Stream fs = null;
+            if (entry.TotalCompressedLength < entry.TotalLength)
+            {
+                decompressState = Lzham.DecompressInit(parameters);
+            }
 
-            //    try
-            //    {
-            //        var offset = entry.Offset;
+            if (entry.TotalLength > 0)
+            {
+                Stream fs = null;
+                ushort currentArchiveIndex = 0x7FFF;
 
-            //        if (entry.ArchiveIndex != 0x7FFF)
-            //        {
-            //            if (!IsDirVPK)
-            //            {
-            //                throw new InvalidOperationException("Given VPK is not a _dir, but entry is referencing an external archive.");
-            //            }
+                try
+                {
+                    foreach (var chunk in entry.Chunks)
+                    {
+                        var streamOffset = chunk.Offset;
 
-            //            var fileName = $"{FileName}_{entry.ArchiveIndex:D3}.vpk";
+                        if (currentArchiveIndex != chunk.ArchiveIndex)
+                        {
+                            currentArchiveIndex = chunk.ArchiveIndex;
+                            fs?.Close();
+                        }
 
-            //            fs = new FileStream(fileName, FileMode.Open, FileAccess.Read);
-            //        }
-            //        else
-            //        {
-            //            fs = Reader.BaseStream;
+                        if (chunk.ArchiveIndex != 0x7FFF)
+                        {
+                            if (currentArchiveIndex != chunk.ArchiveIndex)
+                            {
+                                currentArchiveIndex = chunk.ArchiveIndex;
+                                fs?.Close();
+                            }
 
-            //            offset += HeaderSize + TreeSize;
-            //        }
+                            if (!IsDirVPK)
+                            {
+                                throw new InvalidOperationException("Given VPK is not a _dir, but entry is referencing an external archive.");
+                            }
 
-            //        fs.Seek(offset, SeekOrigin.Begin);
-            //        fs.Read(output, entry.SmallData.Length, (int)entry.Length);
-            //    }
-            //    finally
-            //    {
-            //        if (entry.ArchiveIndex != 0x7FFF)
-            //        {
-            //            fs?.Close();
-            //        }
-            //    }
-            //}
+                            var vpkDirectory = Path.GetDirectoryName(FileName);
+                            var vpkName = Path.GetFileName(FileName);
 
-            //if (validateCrc && entry.CRC32 != Crc32.Compute(output))
-            //{
-            //    throw new InvalidDataException("CRC32 mismatch for read data.");
-            //}
+                            foreach (var prefix in VPK_PREFIXES)
+                            {
+                                if (vpkName.StartsWith(prefix))
+                                {
+                                    vpkName = vpkName.Substring(prefix.Length);
+                                    break;
+                                }
+                            }
+
+                            var fileName = Path.Combine(vpkDirectory, $"{vpkName}_{chunk.ArchiveIndex:D3}.vpk");
+
+                            fs = new FileStream(fileName, FileMode.Open, FileAccess.Read);
+                        }
+                        else
+                        {
+                            fs = Reader.BaseStream;
+
+                            streamOffset += HeaderSize + TreeSize;
+                        }
+
+                        fs.Seek(streamOffset, SeekOrigin.Begin);
+                        var readBuffer = blockReadBuffer.Slice(0, (int)chunk.CompressedLength);
+                        var bytesRead = fs.Read(readBuffer);
+
+                        if (bytesRead != chunk.CompressedLength)
+                        {
+                            throw new InvalidOperationException($"Attempted to read {chunk.CompressedLength} bytes, got {bytesRead.ToString()}.");
+                        }
+
+                        if (chunk.CompressedLength < chunk.Length)
+                        {
+                            var decompressedSpan = outputSpan.Slice(outputOffset);
+                            var decompressResult = Lzham.DecompressMemory(parameters, readBuffer, ref decompressedSpan);
+
+                            if (decompressResult != DecompressStatus.Success)
+                            {
+                                throw new InvalidOperationException($"Error attempting to decompress: {decompressResult.ToString()}");
+                            }
+
+                            outputOffset += (int)chunk.Length;
+                        }
+                        else
+                        {
+                            readBuffer.CopyTo(outputSpan.Slice(outputOffset));
+
+                            outputOffset += bytesRead;
+                        }
+                    }
+                }
+                finally
+                {
+                    if (currentArchiveIndex != 0x7FFF)
+                    {
+                        fs?.Close();
+                    }
+                }
+            }
+
+            output = outputSpan.ToArray();
+
+            if (validateCrc && entry.CRC32 != Crc32.Compute(output))
+            {
+                throw new InvalidDataException("CRC32 mismatch for read data.");
+            }
+
+            if (decompressState != null)
+            {
+                var deinitResult = Lzham.DecompressDeinit(decompressState);
+                
+                if (deinitResult >= DecompressStatus.FirstFailureCode)
+                {
+                    throw new InvalidOperationException($"Error attempting to deinitialize compressor: {deinitResult.ToString()}");
+                }
+            }
         }
 
         private void ReadEntries()
