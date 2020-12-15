@@ -20,10 +20,6 @@ namespace Tests
 
             using var package = new Package();
             package.Read(path);
-
-            package.VerifyHashes();
-
-            Assert.IsTrue(package.IsSignatureValid());
         }
 
         [Test]

@@ -62,51 +62,6 @@ namespace SteamDatabase.ValvePak
         public uint TreeSize { get; private set; }
 
         /// <summary>
-        /// Gets how many bytes of file content are stored in this VPK file (0 in CSGO).
-        /// </summary>
-        public uint FileDataSectionSize { get; private set; }
-
-        /// <summary>
-        /// Gets the size in bytes of the section containing MD5 checksums for external archive content.
-        /// </summary>
-        public uint ArchiveMD5SectionSize { get; private set; }
-
-        /// <summary>
-        /// Gets the size in bytes of the section containing MD5 checksums for content in this file.
-        /// </summary>
-        public uint OtherMD5SectionSize { get; private set; }
-
-        /// <summary>
-        /// Gets the size in bytes of the section containing the public key and signature.
-        /// </summary>
-        public uint SignatureSectionSize { get; private set; }
-
-        /// <summary>
-        /// Gets the MD5 checksum of the file tree.
-        /// </summary>
-        public byte[] TreeChecksum { get; private set; }
-
-        /// <summary>
-        /// Gets the MD5 checksum of the archive MD5 checksum section entries.
-        /// </summary>
-        public byte[] ArchiveMD5EntriesChecksum { get; private set; }
-
-        /// <summary>
-        /// Gets the MD5 checksum of the complete package until the signature structure.
-        /// </summary>
-        public byte[] WholeFileChecksum { get; private set; }
-
-        /// <summary>
-        /// Gets the public key.
-        /// </summary>
-        public byte[] PublicKey { get; private set; }
-
-        /// <summary>
-        /// Gets the signature.
-        /// </summary>
-        public byte[] Signature { get; private set; }
-
-        /// <summary>
         /// Gets the package entries.
         /// </summary>
         public Dictionary<string, List<PackageEntry>> Entries { get; private set; }
@@ -199,16 +154,6 @@ namespace SteamDatabase.ValvePak
             HeaderSize = (uint)input.Position;
 
             ReadEntries();
-
-            if (Version == 2)
-            {
-                // Skip over file data, if any
-                input.Position += FileDataSectionSize;
-
-                ReadArchiveMD5Section();
-                ReadOtherMD5Section();
-                ReadSignatureSection();
-            }
         }
 
         /// <summary>
@@ -431,126 +376,6 @@ namespace SteamDatabase.ValvePak
             }
 
             Entries = typeEntries;
-        }
-
-        /// <summary>
-        /// Verify checksums and signatures provided in the VPK
-        /// </summary>
-        public void VerifyHashes()
-        {
-            if (Version != 2)
-            {
-                throw new InvalidDataException("Only version 2 is supported.");
-            }
-
-            using (var md5 = MD5.Create())
-            {
-                Reader.BaseStream.Position = 0;
-
-                var hash = md5.ComputeHash(Reader.ReadBytes((int)(HeaderSize + TreeSize + FileDataSectionSize + ArchiveMD5SectionSize + 32)));
-
-                if (!hash.SequenceEqual(WholeFileChecksum))
-                {
-                    throw new InvalidDataException($"Package checksum mismatch ({BitConverter.ToString(hash)} != expected {BitConverter.ToString(WholeFileChecksum)})");
-                }
-
-                Reader.BaseStream.Position = HeaderSize;
-
-                hash = md5.ComputeHash(Reader.ReadBytes((int)TreeSize));
-
-                if (!hash.SequenceEqual(TreeChecksum))
-                {
-                    throw new InvalidDataException($"File tree checksum mismatch ({BitConverter.ToString(hash)} != expected {BitConverter.ToString(TreeChecksum)})");
-                }
-
-                Reader.BaseStream.Position = HeaderSize + TreeSize + FileDataSectionSize;
-
-                hash = md5.ComputeHash(Reader.ReadBytes((int)ArchiveMD5SectionSize));
-
-                if (!hash.SequenceEqual(ArchiveMD5EntriesChecksum))
-                {
-                    throw new InvalidDataException($"Archive MD5 entries checksum mismatch ({BitConverter.ToString(hash)} != expected {BitConverter.ToString(ArchiveMD5EntriesChecksum)})");
-                }
-
-                // TODO: verify archive checksums
-            }
-
-            if (PublicKey == null || Signature == null)
-            {
-                return;
-            }
-
-            if (!IsSignatureValid())
-            {
-                throw new InvalidDataException("VPK signature is not valid.");
-            }
-        }
-
-        /// <summary>
-        /// Verifies the RSA signature.
-        /// </summary>
-        /// <returns>True if signature is valid, false otherwise.</returns>
-        public bool IsSignatureValid()
-        {
-            Reader.BaseStream.Position = 0;
-
-            var keyParser = new AsnKeyParser(PublicKey);
-
-            var rsa = RSA.Create();
-            rsa.ImportParameters(keyParser.ParseRSAPublicKey());
-
-            var data = Reader.ReadBytes((int)(HeaderSize + TreeSize + FileDataSectionSize + ArchiveMD5SectionSize + OtherMD5SectionSize));
-
-            return rsa.VerifyData(data, Signature, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-        }
-
-        private void ReadArchiveMD5Section()
-        {
-            ArchiveMD5Entries = new List<ArchiveMD5SectionEntry>();
-
-            if (ArchiveMD5SectionSize == 0)
-            {
-                return;
-            }
-
-            var entries = ArchiveMD5SectionSize / 28; // 28 is sizeof(VPK_MD5SectionEntry), which is int + int + int + 16 chars
-
-            for (var i = 0; i < entries; i++)
-            {
-                ArchiveMD5Entries.Add(new ArchiveMD5SectionEntry
-                {
-                    ArchiveIndex = Reader.ReadUInt32(),
-                    Offset = Reader.ReadUInt32(),
-                    Length = Reader.ReadUInt32(),
-                    Checksum = Reader.ReadBytes(16)
-                });
-            }
-        }
-
-        private void ReadOtherMD5Section()
-        {
-            if (OtherMD5SectionSize != 48)
-            {
-                throw new InvalidDataException($"Encountered OtherMD5Section with size of {OtherMD5SectionSize} (should be 48)");
-            }
-
-            TreeChecksum = Reader.ReadBytes(16);
-            ArchiveMD5EntriesChecksum = Reader.ReadBytes(16);
-            WholeFileChecksum = Reader.ReadBytes(16);
-        }
-
-        private void ReadSignatureSection()
-        {
-            if (SignatureSectionSize == 0)
-            {
-                return;
-            }
-
-            var publicKeySize = Reader.ReadInt32();
-            PublicKey = Reader.ReadBytes(publicKeySize);
-
-            var signatureSize = Reader.ReadInt32();
-            Signature = Reader.ReadBytes(signatureSize);
         }
     }
 }
