@@ -11,10 +11,12 @@ namespace Tests
     [TestFixture]
     public class PackageTest
     {
+        private static readonly string APEX_VPK_DIRECTORY = "D:\\Steam\\steamapps\\common\\Apex Legends\\vpk";
+
         [Test]
         public void ParseVPK()
         {
-            var path = Path.Combine(TestContext.CurrentContext.TestDirectory, "Files", "platform_misc_dir.vpk");
+            var path = Path.Combine(APEX_VPK_DIRECTORY, "englishclient_frontend.bsp.pak000_dir.vpk");
 
             using var package = new Package();
             package.Read(path);
@@ -56,38 +58,29 @@ namespace Tests
             using var package = new Package();
             package.Read(path);
 
-            Assert.AreEqual(0xA4115395, package.FindEntry("addons\\chess\\chess.vdf")?.CRC32);
-            Assert.AreEqual(0xA4115395, package.FindEntry("addons\\chess\\", "chess.vdf")?.CRC32);
-            Assert.AreEqual(0xA4115395, package.FindEntry("addons\\chess\\", "chess", "vdf")?.CRC32);
+            Assert.AreEqual(0x8CF300C4, package.FindEntry("scripts\\aibehavior\\common_schedules.txt")?.CRC32);
+            Assert.AreEqual(0x8CF300C4, package.FindEntry("scripts\\aibehavior\\", "common_schedules.txt")?.CRC32);
+            Assert.AreEqual(0x8CF300C4, package.FindEntry("scripts\\aibehavior\\", "common_schedules", "txt")?.CRC32);
 
-            Assert.AreEqual(0xA4115395, package.FindEntry("addons/chess\\chess.vdf")?.CRC32);
-            Assert.AreEqual(0xA4115395, package.FindEntry("addons/chess\\", "chess.vdf")?.CRC32);
-            Assert.AreEqual(0xA4115395, package.FindEntry("addons/chess\\", "chess", "vdf")?.CRC32);
+            Assert.AreEqual(0x8CF300C4, package.FindEntry("scripts/aibehavior\\common_schedules.txt")?.CRC32);
+            Assert.AreEqual(0x8CF300C4, package.FindEntry("scripts/aibehavior\\", "common_schedules.txt")?.CRC32);
+            Assert.AreEqual(0x8CF300C4, package.FindEntry("scripts/aibehavior\\", "common_schedules", "txt")?.CRC32);
 
-            Assert.AreEqual(0xA4115395, package.FindEntry("addons/chess/chess.vdf")?.CRC32);
-            Assert.AreEqual(0xA4115395, package.FindEntry("addons/chess/", "chess.vdf")?.CRC32);
-            Assert.AreEqual(0xA4115395, package.FindEntry("addons/chess/", "chess", "vdf")?.CRC32);
+            Assert.AreEqual(0x8CF300C4, package.FindEntry("scripts/aibehavior/common_schedules.txt")?.CRC32);
+            Assert.AreEqual(0x8CF300C4, package.FindEntry("scripts/aibehavior/", "common_schedules.txt")?.CRC32);
+            Assert.AreEqual(0x8CF300C4, package.FindEntry("scripts/aibehavior/", "common_schedules", "txt")?.CRC32);
 
-            Assert.AreEqual(0xA4115395, package.FindEntry("\\addons/chess/chess.vdf")?.CRC32);
-            Assert.AreEqual(0xA4115395, package.FindEntry("\\addons/chess/", "chess.vdf")?.CRC32);
-            Assert.AreEqual(0xA4115395, package.FindEntry("\\addons/chess/", "chess", "vdf")?.CRC32);
+            Assert.AreEqual(0x8CF300C4, package.FindEntry("\\scripts/aibehavior/common_schedules.txt")?.CRC32);
+            Assert.AreEqual(0x8CF300C4, package.FindEntry("\\scripts/aibehavior/", "common_schedules.txt")?.CRC32);
+            Assert.AreEqual(0x8CF300C4, package.FindEntry("\\scripts/aibehavior/", "common_schedules", "txt")?.CRC32);
 
-            Assert.AreEqual(0xA4115395, package.FindEntry("/addons/chess/chess.vdf")?.CRC32);
-            Assert.AreEqual(0xA4115395, package.FindEntry("/addons/chess/", "chess.vdf")?.CRC32);
-            Assert.AreEqual(0xA4115395, package.FindEntry("/addons/chess/", "chess", "vdf")?.CRC32);
+            Assert.AreEqual(0x8CF300C4, package.FindEntry("/scripts/aibehavior/common_schedules.txt")?.CRC32);
+            Assert.AreEqual(0x8CF300C4, package.FindEntry("/scripts/aibehavior/", "common_schedules.txt")?.CRC32);
+            Assert.AreEqual(0x8CF300C4, package.FindEntry("/scripts/aibehavior/", "common_schedules", "txt")?.CRC32);
 
-            Assert.IsNull(package.FindEntry("\\addons/chess/hello_github_reader.vdf"));
-            Assert.IsNull(package.FindEntry("\\addons/chess/", "hello_github_reader.vdf"));
-            Assert.IsNull(package.FindEntry("\\addons/chess/", "hello_github_reader", "vdf"));
-
-            Assert.IsNull(package.FindEntry("\\addons/hello_github_reader/chess.vdf"));
-            Assert.IsNull(package.FindEntry("\\addons/hello_github_reader/", "chess.vdf"));
-            Assert.IsNull(package.FindEntry("\\addons/hello_github_reader/", "chess", "vdf"));
-
-            Assert.IsNull(package.FindEntry("\\addons/", "chess/chess.vdf"));
-            Assert.IsNull(package.FindEntry("\\addons/", "chess/chess", "vdf"));
-            Assert.IsNull(package.FindEntry("\\addons/", "chess\\chess.vdf"));
-            Assert.IsNull(package.FindEntry("\\addons/", "chess\\chess", "vdf"));
+            Assert.IsNull(package.FindEntry("\\scripts/aibehavior/hello_github_reader.vdf"));
+            Assert.IsNull(package.FindEntry("\\scripts/aibehavior/", "hello_github_reader.vdf"));
+            Assert.IsNull(package.FindEntry("\\scripts/aibehavior/", "hello_github_reader", "vdf"));
         }
 
         [Test]
