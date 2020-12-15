@@ -27,20 +27,7 @@ namespace SteamDatabase.ValvePak
         /// </summary>
         public uint CRC32 { get; set; }
 
-        /// <summary>
-        /// Gets or sets the length in bytes.
-        /// </summary>
-        public uint Length { get; set; }
-
-        /// <summary>
-        /// Gets or sets the offset in the package.
-        /// </summary>
-        public uint Offset { get; set; }
-
-        /// <summary>
-        /// Gets or sets which archive this entry is in.
-        /// </summary>
-        public ushort ArchiveIndex { get; set; }
+        public PackageEntryChunk[] Chunks { get; set; }
 
         /// <summary>
         /// Gets the length in bytes by adding Length and length of SmallData.
@@ -49,7 +36,12 @@ namespace SteamDatabase.ValvePak
         {
             get
             {
-                var totalLength = Length;
+                uint totalLength = 0;
+
+                for (int i = 0; i < Chunks.Length; ++i)
+                {
+                    totalLength += Chunks[i].Length;
+                }
 
                 if (SmallData != null)
                 {
@@ -57,6 +49,21 @@ namespace SteamDatabase.ValvePak
                 }
 
                 return totalLength;
+            }
+        }
+
+        public uint TotalCompressedLength
+        {
+            get
+            {
+                uint totalCompressedLength = 0;
+
+                for (int i = 0; i < Chunks.Length; ++i)
+                {
+                    totalCompressedLength += Chunks[i].CompressedLength;
+                }
+
+                return totalCompressedLength;
             }
         }
 
@@ -97,7 +104,7 @@ namespace SteamDatabase.ValvePak
 
         public override string ToString()
         {
-            return $"{GetFullPath()} crc=0x{CRC32:x2} metadatasz={SmallData.Length} fnumber={ArchiveIndex} ofs=0x{Offset:x2} sz={Length}";
+            return $"{GetFullPath()} crc=0x{CRC32:x2} metadatasz={SmallData.Length} csz={TotalCompressedLength} sz={TotalLength}";
         }
     }
 }

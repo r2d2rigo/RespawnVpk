@@ -36,6 +36,7 @@ namespace SteamDatabase.ValvePak
     public class Package : IDisposable
     {
         public const int MAGIC = 0x55AA1234;
+        public const int MAX_ENTRY_CHUNK_SIZE = 1024 * 1024;
 
         /// <summary>
         /// Always '/' as per Valve's vpk implementation.
@@ -65,11 +66,6 @@ namespace SteamDatabase.ValvePak
         /// Gets the package entries.
         /// </summary>
         public Dictionary<string, List<PackageEntry>> Entries { get; private set; }
-
-        /// <summary>
-        /// Gets the archive MD5 checksum section entries. Also known as cache line hashes.
-        /// </summary>
-        public List<ArchiveMD5SectionEntry> ArchiveMD5Entries { get; private set; }
 
         /// <summary>
         /// Releases binary reader.
@@ -259,55 +255,57 @@ namespace SteamDatabase.ValvePak
         /// <param name="validateCrc">If true, CRC32 will be calculated and verified for read data.</param>
         public void ReadEntry(PackageEntry entry, out byte[] output, bool validateCrc = true)
         {
-            output = new byte[entry.SmallData.Length + entry.Length];
+            throw new NotImplementedException();
 
-            if (entry.SmallData.Length > 0)
-            {
-                entry.SmallData.CopyTo(output, 0);
-            }
+            //output = new byte[entry.SmallData.Length + entry.Length];
 
-            if (entry.Length > 0)
-            {
-                Stream fs = null;
+            //if (entry.SmallData.Length > 0)
+            //{
+            //    entry.SmallData.CopyTo(output, 0);
+            //}
 
-                try
-                {
-                    var offset = entry.Offset;
+            //if (entry.Length > 0)
+            //{
+            //    Stream fs = null;
 
-                    if (entry.ArchiveIndex != 0x7FFF)
-                    {
-                        if (!IsDirVPK)
-                        {
-                            throw new InvalidOperationException("Given VPK is not a _dir, but entry is referencing an external archive.");
-                        }
+            //    try
+            //    {
+            //        var offset = entry.Offset;
 
-                        var fileName = $"{FileName}_{entry.ArchiveIndex:D3}.vpk";
+            //        if (entry.ArchiveIndex != 0x7FFF)
+            //        {
+            //            if (!IsDirVPK)
+            //            {
+            //                throw new InvalidOperationException("Given VPK is not a _dir, but entry is referencing an external archive.");
+            //            }
 
-                        fs = new FileStream(fileName, FileMode.Open, FileAccess.Read);
-                    }
-                    else
-                    {
-                        fs = Reader.BaseStream;
+            //            var fileName = $"{FileName}_{entry.ArchiveIndex:D3}.vpk";
 
-                        offset += HeaderSize + TreeSize;
-                    }
+            //            fs = new FileStream(fileName, FileMode.Open, FileAccess.Read);
+            //        }
+            //        else
+            //        {
+            //            fs = Reader.BaseStream;
 
-                    fs.Seek(offset, SeekOrigin.Begin);
-                    fs.Read(output, entry.SmallData.Length, (int)entry.Length);
-                }
-                finally
-                {
-                    if (entry.ArchiveIndex != 0x7FFF)
-                    {
-                        fs?.Close();
-                    }
-                }
-            }
+            //            offset += HeaderSize + TreeSize;
+            //        }
 
-            if (validateCrc && entry.CRC32 != Crc32.Compute(output))
-            {
-                throw new InvalidDataException("CRC32 mismatch for read data.");
-            }
+            //        fs.Seek(offset, SeekOrigin.Begin);
+            //        fs.Read(output, entry.SmallData.Length, (int)entry.Length);
+            //    }
+            //    finally
+            //    {
+            //        if (entry.ArchiveIndex != 0x7FFF)
+            //        {
+            //            fs?.Close();
+            //        }
+            //    }
+            //}
+
+            //if (validateCrc && entry.CRC32 != Crc32.Compute(output))
+            //{
+            //    throw new InvalidDataException("CRC32 mismatch for read data.");
+            //}
         }
 
         private void ReadEntries()
@@ -353,10 +351,30 @@ namespace SteamDatabase.ValvePak
                             TypeName = typeName,
                             CRC32 = Reader.ReadUInt32(),
                             SmallData = new byte[Reader.ReadUInt16()],
-                            ArchiveIndex = Reader.ReadUInt16(),
-                            Offset = Reader.ReadUInt32(),
-                            Length = Reader.ReadUInt32()
                         };
+
+                        var entryChunks = new List<PackageEntryChunk>();
+                        PackageEntryChunk chunk = null;
+
+                        do
+                        {
+                            chunk = new PackageEntryChunk()
+                            {
+                                ArchiveIndex = Reader.ReadUInt16(),
+                                Unknown1 = Reader.ReadBytes(6),
+                                Offset = Reader.ReadUInt32(),
+                                Unknown2 = Reader.ReadBytes(4),
+                                CompressedLength = Reader.ReadUInt32(),
+                                Unknown3 = Reader.ReadBytes(4),
+                                Length = Reader.ReadUInt32(),
+                                Unknown4 = Reader.ReadBytes(4),
+                            };
+
+                            entryChunks.Add(chunk);
+
+                        } while (chunk.Length == MAX_ENTRY_CHUNK_SIZE);
+
+                        entry.Chunks = entryChunks.ToArray();
 
                         if (Reader.ReadUInt16() != 0xFFFF)
                         {

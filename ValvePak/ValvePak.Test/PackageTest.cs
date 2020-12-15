@@ -49,7 +49,7 @@ namespace Tests
         [Test]
         public void FindEntryDeep()
         {
-            var path = Path.Combine(TestContext.CurrentContext.TestDirectory, "Files", "platform_misc_dir.vpk");
+            var path = Path.Combine(APEX_VPK_DIRECTORY, "englishclient_frontend.bsp.pak000_dir.vpk");
 
             using var package = new Package();
             package.Read(path);
