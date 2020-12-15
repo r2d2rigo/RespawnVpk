@@ -189,19 +189,9 @@ namespace SteamDatabase.ValvePak
 
             Version = Reader.ReadUInt32();
             TreeSize = Reader.ReadUInt32();
+            var headerUnknown = Reader.ReadUInt32();
 
-            if (Version == 1)
-            {
-                // Nothing else
-            }
-            else if (Version == 2)
-            {
-                FileDataSectionSize = Reader.ReadUInt32();
-                ArchiveMD5SectionSize = Reader.ReadUInt32();
-                OtherMD5SectionSize = Reader.ReadUInt32();
-                SignatureSectionSize = Reader.ReadUInt32();
-            }
-            else
+            if (Version != 0x00030002)
             {
                 throw new InvalidDataException($"Bad VPK version. ({Version})");
             }
