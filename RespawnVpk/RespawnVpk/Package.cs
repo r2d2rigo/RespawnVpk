@@ -445,11 +445,13 @@ namespace RespawnVpk
                         var entryChunks = new List<PackageEntryChunk>();
                         PackageEntryChunk chunk = null;
 
-                        do
+                        var archiveIndex = Reader.ReadUInt16();
+
+                        while (archiveIndex != 0xFFFF)
                         {
                             chunk = new PackageEntryChunk()
                             {
-                                ArchiveIndex = Reader.ReadUInt16(),
+                                ArchiveIndex = archiveIndex,
                                 Unknown1 = Reader.ReadBytes(6),
                                 Offset = Reader.ReadUInt32(),
                                 Unknown2 = Reader.ReadBytes(4),
@@ -461,14 +463,10 @@ namespace RespawnVpk
 
                             entryChunks.Add(chunk);
 
-                        } while (chunk.Length == MAX_ENTRY_CHUNK_SIZE);
+                            archiveIndex = Reader.ReadUInt16();
+                        }
 
                         entry.Chunks = entryChunks.ToArray();
-
-                        if (Reader.ReadUInt16() != 0xFFFF)
-                        {
-                            throw new FormatException("Invalid terminator.");
-                        }
 
                         if (entry.SmallData.Length > 0)
                         {

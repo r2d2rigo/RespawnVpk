@@ -11,8 +11,10 @@ namespace Tests
     [TestFixture]
     public class PackageTest 
     {
+        private static readonly string TF2_VPK_DIRECTORY = "D:\\Origin Games\\Titanfall2\\vpk";
         private static readonly string APEX_VPK_DIRECTORY = "D:\\Steam\\steamapps\\common\\Apex Legends\\vpk";
         private static readonly string APEX_TEST_VPK_FILENAME = "englishclient_frontend.bsp.pak000_dir.vpk";
+        private static readonly string TF2_TEST_VPK_FILENAME = "englishclient_mp_angel_city.bsp.pak000_dir.vpk";
 
         [Test]
         public void ParseVPK()
@@ -124,15 +126,10 @@ namespace Tests
         }
 
         [Test]
-        public void ExtractDirVPK()
+        public void ExtractApexDirVPK()
         {
             var path = Path.Combine(APEX_VPK_DIRECTORY, APEX_TEST_VPK_FILENAME);
 
-            TestVPKExtraction(path);
-        }
-
-        private void TestVPKExtraction(string path)
-        {
             using var package = new Package();
             package.Read(path);
 
@@ -167,6 +164,49 @@ namespace Tests
 
             Assert.AreEqual(flatEntries["gameinfo.txt"].TotalLength, 1498);
             Assert.AreEqual(flatEntries["resource/notosansjp-regular.vfont"].TotalLength, 4479600);
+        }
+
+        [Test]
+        public void ExtractTF2DirVPK()
+        {
+            var path = Path.Combine(TF2_VPK_DIRECTORY, TF2_TEST_VPK_FILENAME);
+
+            using var package = new Package();
+            package.Read(path);
+
+            Assert.AreEqual(11, package.Entries.Count);
+            Assert.Contains("vtf", package.Entries.Keys);
+            Assert.Contains("vmt", package.Entries.Keys);
+
+            var flatEntries = new Dictionary<string, PackageEntry>();
+
+            using (var sha1 = SHA1.Create())
+            {
+                var data = new Dictionary<string, string>();
+
+                foreach (var a in package.Entries)
+                {
+                    foreach (var b in a.Value)
+                    {
+                        Assert.AreEqual(a.Key, b.TypeName);
+
+                        flatEntries.Add(b.GetFullPath(), b);
+
+                        package.ReadEntry(b, out var entry);
+
+                        data.Add(b.GetFullPath(), BitConverter.ToString(sha1.ComputeHash(entry)).Replace("-", string.Empty));
+                    }
+                }
+
+                Assert.AreNotEqual(0, data.Count);
+                Assert.AreEqual("07187C9BA4333AD9C095DB34837D7CDE2648090A", data["depot/r2dlc11/game/r2/maps/mp_angel_city.bsp.0069.bsp_lump"]);
+                Assert.AreEqual("1893CD50D51DDAF2BDCBF7143704C2169C249A84", data["models/vistas/angel_city_se.mdl"]);
+                Assert.AreEqual("AB63D65309027DA45979CDC37427BFC37BB1420F", data["scripts/vscripts/client/cl_carrier.gnut"]);
+            }
+
+            Assert.AreEqual(flatEntries["depot/r2dlc11/game/r2/maps/mp_angel_city.bsp.0069.bsp_lump"].TotalLength, 34603008);
+            Assert.AreEqual(flatEntries["models/vistas/angel_city_se.mdl"].TotalLength, 10146095);
+            Assert.AreEqual(flatEntries["scripts/vscripts/client/cl_carrier.gnut"].TotalLength, 32000);
         }
     }
 }
