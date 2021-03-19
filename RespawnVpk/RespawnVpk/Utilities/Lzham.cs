@@ -38,5 +38,13 @@ namespace RespawnVpk.Utilities
                 return (DecompressStatus)lzham_decompress_memory(parameters, pDestination, ref destinationLength, pSource, sourceLength, ref adler32);
             }
         }
+
+        public static unsafe DecompressStatus DecompressMemory(DecompressParameters parameters, Memory<byte> source, ref Memory<byte> destination)
+        {
+            var sourceSpan = source.Span;
+            var destinationSpan = destination.Span;
+
+            return DecompressMemory(parameters, sourceSpan, ref destinationSpan);
+        }
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Threading.Tasks;
 using NUnit.Framework;
 using RespawnVpk;
 
@@ -126,7 +127,7 @@ namespace Tests
         }
 
         [Test]
-        public void ExtractApexDirVPK()
+        public async Task ExtractApexDirVPKAsync()
         {
             var path = Path.Combine(APEX_VPK_DIRECTORY, APEX_TEST_VPK_FILENAME);
 
@@ -151,9 +152,9 @@ namespace Tests
 
                         flatEntries.Add(b.GetFullPath(), b);
 
-                        package.ReadEntry(b, out var entry);
+                        var entry = await package.ReadEntryAsync(b);
 
-                        data.Add(b.GetFullPath(), BitConverter.ToString(sha1.ComputeHash(entry)).Replace("-", string.Empty));
+                        data.Add(b.GetFullPath(), BitConverter.ToString(sha1.ComputeHash(entry.ToArray())).Replace("-", string.Empty));
                     }
                 }
 
@@ -167,7 +168,7 @@ namespace Tests
         }
 
         [Test]
-        public void ExtractTF2DirVPK()
+        public async Task ExtractTF2DirVPKAsync()
         {
             var path = Path.Combine(TF2_VPK_DIRECTORY, TF2_TEST_VPK_FILENAME);
 
@@ -192,9 +193,9 @@ namespace Tests
 
                         flatEntries.Add(b.GetFullPath(), b);
 
-                        package.ReadEntry(b, out var entry);
+                        var entry = await package.ReadEntryAsync(b);
 
-                        data.Add(b.GetFullPath(), BitConverter.ToString(sha1.ComputeHash(entry)).Replace("-", string.Empty));
+                        data.Add(b.GetFullPath(), BitConverter.ToString(sha1.ComputeHash(entry.ToArray())).Replace("-", string.Empty));
                     }
                 }
 
@@ -207,6 +208,59 @@ namespace Tests
             Assert.AreEqual(flatEntries["depot/r2dlc11/game/r2/maps/mp_angel_city.bsp.0069.bsp_lump"].TotalLength, 34603008);
             Assert.AreEqual(flatEntries["models/vistas/angel_city_se.mdl"].TotalLength, 10146095);
             Assert.AreEqual(flatEntries["scripts/vscripts/client/cl_carrier.gnut"].TotalLength, 32000);
+        }
+
+        [Test]
+        public async Task ExtractWithProgressAsync()
+        {
+            var path = Path.Combine(APEX_VPK_DIRECTORY, APEX_TEST_VPK_FILENAME);
+
+            using var package = new Package();
+            package.Read(path);
+
+            Assert.AreEqual(11, package.Entries.Count);
+            Assert.Contains("txt", package.Entries.Keys);
+            Assert.Contains("cfg", package.Entries.Keys);
+
+            var flatEntries = new Dictionary<string, PackageEntry>();
+
+            using (var sha1 = SHA1.Create())
+            {
+                var data = new Dictionary<string, string>();
+
+                foreach (var a in package.Entries)
+                {
+                    var progressCalled = false;
+
+                    foreach (var b in a.Value)
+                    {
+                        Assert.AreEqual(a.Key, b.TypeName);
+
+                        flatEntries.Add(b.GetFullPath(), b);
+
+                        var progress = new Progress<int>(progressValue =>
+                        {
+                            progressCalled = true;
+
+                            Assert.AreNotEqual(0, progressValue);
+                            Assert.LessOrEqual(progressValue, b.TotalLength);
+                        });
+
+                        var entry = await package.ReadEntryAsync(b, progress);
+
+                        data.Add(b.GetFullPath(), BitConverter.ToString(sha1.ComputeHash(entry.ToArray())).Replace("-", string.Empty));
+                    }
+
+                    Assert.IsTrue(progressCalled);
+                }
+
+                Assert.AreNotEqual(0, data.Count);
+                Assert.AreEqual("A9FF3616D6D58C78579D1A49CDB469A22D068D37", data["gameinfo.txt"]);
+                Assert.AreEqual("2EF43AAF78B644702990D43F0F72ADAB8E644396", data["resource/notosansjp-regular.vfont"]);
+            }
+
+            Assert.AreEqual(flatEntries["gameinfo.txt"].TotalLength, 1498);
+            Assert.AreEqual(flatEntries["resource/notosansjp-regular.vfont"].TotalLength, 4479600);
         }
     }
 }

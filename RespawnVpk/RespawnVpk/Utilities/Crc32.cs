@@ -74,7 +74,34 @@ namespace RespawnVpk
         /// <returns>The computed checksum.</returns>
         public static uint Compute(byte[] buffer)
         {
-            return ~buffer.Aggregate(0xFFFFFFFF, (current, t) => (current >> 8) ^ Table[t ^ (current & 0xff)]);
+            return Compute(buffer.AsSpan<byte>());
+        }
+
+        /// <summary>
+        /// Compute a checksum for a given span of bytes.
+        /// </summary>
+        /// <param name="buffer">The span of bytes to compute the checksum for.</param>
+        /// <returns>The computed checksum.</returns>
+        public static uint Compute(Span<byte> buffer)
+        {
+            uint current = 0xFFFFFFFF;
+
+            for (int i = 0; i < buffer.Length; i++)
+            {
+                current = (current >> 8) ^ Table[buffer[i] ^ (current & 0xff)];
+            }
+
+            return ~current;
+        }
+
+        /// <summary>
+        /// Compute a checksum for a given memory of bytes.
+        /// </summary>
+        /// <param name="buffer">The memory of bytes to compute the checksum for.</param>
+        /// <returns>The computed checksum.</returns>
+        public static uint Compute(Memory<byte> buffer)
+        {
+            return Compute(buffer.Span);
         }
     }
 }

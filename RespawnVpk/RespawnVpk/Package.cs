@@ -29,6 +29,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace RespawnVpk
 {
@@ -265,21 +266,33 @@ namespace RespawnVpk
         /// Reads the entry from the VPK package.
         /// </summary>
         /// <param name="entry">Package entry.</param>
-        /// <param name="output">Output buffer.</param>
         /// <param name="validateCrc">If true, CRC32 will be calculated and verified for read data.</param>
-        public void ReadEntry(PackageEntry entry, out byte[] output, bool validateCrc = true)
+        /// <returns>Output buffer.</returns>
+        public Task<Memory<byte>> ReadEntryAsync(PackageEntry entry, bool validateCrc = true)
+        {
+            return ReadEntryAsync(entry, null, validateCrc);
+        }
+
+        /// <summary>
+        /// Reads the entry from the VPK package.
+        /// </summary>
+        /// <param name="entry">Package entry.</param>
+        /// <param name="progressReporter">Progress report callback.</param>
+        /// <param name="validateCrc">If true, CRC32 will be calculated and verified for read data.</param>
+        /// <returns>Output buffer.</returns>
+        public async Task<Memory<byte>> ReadEntryAsync(PackageEntry entry, IProgress<int> progressReporter, bool validateCrc = true)
         {
             DecompressState decompressState = null;
             var parameters = new DecompressParameters();
             parameters.DictSizeLog2 = 20;
 
-            var blockReadBuffer = new Span<byte>(new byte[MAX_ENTRY_CHUNK_SIZE]);
-            var outputSpan = new Span<byte>(new byte[entry.SmallData.Length + entry.TotalLength]);
+            var blockReadBuffer = new Memory<byte>(new byte[MAX_ENTRY_CHUNK_SIZE]);
+            var outputBuffer = new Memory<byte>(new byte[entry.SmallData.Length + entry.TotalLength]);
             var outputOffset = 0;
 
             if (entry.SmallData.Length > 0)
             {
-                entry.SmallData.CopyTo(outputSpan);
+                entry.SmallData.CopyTo(outputBuffer);
                 outputOffset += entry.SmallData.Length;
             }
 
@@ -343,7 +356,7 @@ namespace RespawnVpk
 
                         fs.Seek(streamOffset, SeekOrigin.Begin);
                         var readBuffer = blockReadBuffer.Slice(0, (int)chunk.CompressedLength);
-                        var bytesRead = fs.Read(readBuffer);
+                        var bytesRead = await fs.ReadAsync(readBuffer);
 
                         if (bytesRead != chunk.CompressedLength)
                         {
@@ -352,7 +365,7 @@ namespace RespawnVpk
 
                         if (chunk.CompressedLength < chunk.Length)
                         {
-                            var decompressedSpan = outputSpan.Slice(outputOffset);
+                            var decompressedSpan = outputBuffer.Slice(outputOffset);
                             var decompressResult = Lzham.DecompressMemory(parameters, readBuffer, ref decompressedSpan);
 
                             if (decompressResult != DecompressStatus.Success)
@@ -364,9 +377,14 @@ namespace RespawnVpk
                         }
                         else
                         {
-                            readBuffer.CopyTo(outputSpan.Slice(outputOffset));
+                            readBuffer.CopyTo(outputBuffer.Slice(outputOffset));
 
                             outputOffset += bytesRead;
+                        }
+
+                        if (progressReporter != null)
+                        {
+                            progressReporter.Report(outputOffset);
                         }
                     }
                 }
@@ -379,9 +397,7 @@ namespace RespawnVpk
                 }
             }
 
-            output = outputSpan.ToArray();
-
-            if (validateCrc && entry.CRC32 != Crc32.Compute(output))
+            if (validateCrc && entry.CRC32 != Crc32.Compute(outputBuffer))
             {
                 throw new InvalidDataException("CRC32 mismatch for read data.");
             }
@@ -395,6 +411,8 @@ namespace RespawnVpk
                     throw new InvalidOperationException($"Error attempting to deinitialize compressor: {deinitResult.ToString()}");
                 }
             }
+
+            return outputBuffer;
         }
 
         private void ReadEntries()
